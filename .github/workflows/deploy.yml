@@ -1,9 +1,9 @@
-name: Deploy ForestFire App to EC2
+name: Deploy to EC2
 
 on:
   push:
     branches:
-      - main  # Runs this workflow on every push to main
+      - main
 
 jobs:
   deploy:
@@ -13,21 +13,14 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-
-    - name: Install Dependencies
+    - name: Set up SSH Key
       run: |
-        pip install -r requirements.txt
+        echo "$EC2_SSH_KEY" > private_key.pem
+        chmod 600 private_key.pem
 
     - name: Deploy to EC2
       env:
-        SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
         EC2_HOST: 13.217.166.114
       run: |
-        echo "$SSH_PRIVATE_KEY" > private_key.pem
-        chmod 600 private_key.pem
-        scp -r -i private_key.pem * ec2-user@$EC2_HOST:~/ForestFire/
-        ssh -i private_key.pem ec2-user@$EC2_HOST "cd ~/ForestFire && python3 app.py"
+        scp -o StrictHostKeyChecking=no -i private_key.pem -r * ec2-user@$EC2_HOST:~/ForestFire/
+        ssh -o StrictHostKeyChecking=no -i private_key.pem ec2-user@$EC2_HOST "cd ~/ForestFire && python3 app.py"
