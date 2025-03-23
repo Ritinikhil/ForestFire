@@ -20,7 +20,7 @@ jobs:
 
     - name: Deploy to EC2
       env:
-        EC2_HOST: 13.217.166.114
+        EC2_HOST: 54.165.52.235
       run: |
         scp -o StrictHostKeyChecking=no -i private_key.pem -r * ec2-user@$EC2_HOST:~/ForestFire/
         ssh -o StrictHostKeyChecking=no -i private_key.pem ec2-user@$EC2_HOST "cd ~/ForestFire && python3 app.py"
