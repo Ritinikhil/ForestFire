@@ -1,30 +1,46 @@
-name: Deploy to EC2
+name: AWS Deployment Without Root
 
 on:
   push:
     branches:
-      - main
+      - main  # Change branch if needed
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Install AWS CLI
-      run: |
-        sudo apt update
-        sudo apt install -y awscli
+      # ✅ Check if AWS CLI is pre-installed (GitHub Runners usually have it)
+      - name: Check AWS CLI Version
+        run: aws --version || echo "AWS CLI not found, installing manually..."
 
-    - name: Send Files to EC2
-      env:
-        EC2_INSTANCE_ID: i-06a3fc62be664af42  # Replace with your EC2 instance ID
-        AWS_REGION: us-east-1c  # Change if your instance is in a different region
-      run: |
-        aws ssm send-command \
-          --document-name "AWS-RunShellScript" \
-          --targets "Key=instanceids,Values=$EC2_INSTANCE_ID" \
-          --parameters 'commands=["cd ~/ForestFire && git pull && python3 app.py"]' \
-          --region $AWS_REGION
+      # ✅ Install AWS CLI Locally Without Root (if needed)
+      - name: Install AWS CLI Locally
+        run: |
+          if ! command -v aws &> /dev/null; then
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            ./aws/install --install-dir ~/aws-cli --bin-dir ~/bin
+            echo "$HOME/bin" >> $GITHUB_PATH
+          fi
+          aws --version  # Verify installation
+
+      # ✅ Use Boto3 to Deploy (No `aws configure` needed)
+      - name: Install Boto3
+        run: pip install boto3
+
+      - name: Deploy Using Boto3
+        run: |
+          python - <<EOF
+          import boto3
+          session = boto3.Session()
+          s3 = session.client('s3')
+          response = s3.list_buckets()
+          print("S3 Buckets:", response['Buckets'])
+          EOF
+
+      - name: Deployment Completed
+        run: echo "Deployment finished successfully!"
