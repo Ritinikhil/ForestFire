@@ -1,4 +1,3 @@
-!pip install flask
 from app import app  # Import your Flask app
 import unittest
 
