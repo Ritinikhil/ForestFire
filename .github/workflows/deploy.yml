@@ -1,46 +1,48 @@
-name: AWS Deployment Without Root
+name: Flask App CI/CD
 
 on:
   push:
     branches:
-      - main  # Change branch if needed
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-      # ✅ Check if AWS CLI is pre-installed (GitHub Runners usually have it)
-      - name: Check AWS CLI Version
-        run: aws --version || echo "AWS CLI not found, installing manually..."
+      # Step 2: Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
 
-      # ✅ Install AWS CLI Locally Without Root (if needed)
-      - name: Install AWS CLI Locally
+      # Step 3: Install dependencies
+      - name: Install dependencies
         run: |
-          if ! command -v aws &> /dev/null; then
-            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-            unzip awscliv2.zip
-            ./aws/install --install-dir ~/aws-cli --bin-dir ~/bin
-            echo "$HOME/bin" >> $GITHUB_PATH
-          fi
-          aws --version  # Verify installation
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      # ✅ Use Boto3 to Deploy (No `aws configure` needed)
-      - name: Install Boto3
-        run: pip install boto3
-
-      - name: Deploy Using Boto3
+      # Step 4: Run tests (optional)
+      - name: Run tests
         run: |
-          python - <<EOF
-          import boto3
-          session = boto3.Session()
-          s3 = session.client('s3')
-          response = s3.list_buckets()
-          print("S3 Buckets:", response['Buckets'])
+          python -m unittest discover tests
+
+      # Step 5: Deploy to EC2
+      - name: Deploy to EC2 Instance via SSH
+        run: |
+          sshpass -p ${{ secrets.EC2_PASSWORD }} ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << EOF
+          cd ~/ForestFire/
+          git pull origin main
+          python3 app.py &
           EOF
 
-      - name: Deployment Completed
-        run: echo "Deployment finished successfully!"
+    env:
+      EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}
+      EC2_PASSWORD: ${{ secrets.EC2_PASSWORD }}
