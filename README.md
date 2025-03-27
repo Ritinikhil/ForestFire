@@ -1,6 +1,5 @@
 # Forest Fire Prediction System
 
-
 ## Introduction
 Forest fires are one of the most devastating natural disasters, causing widespread damage to ecosystems, biodiversity, and the environment. This project aims to predict forest fire probability using machine learning techniques based on environmental factors such as temperature, humidity, and oxygen levels.
 
